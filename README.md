@@ -225,6 +225,6 @@ A: Modify the pipeline configuration in `main.rs` to add, remove, or reorder pro
 
 ## 📧 Contact
 
-Your Name - [@Iko Afianando](https://twitter.com/venxfa)
+Find me on twitter: [@Iko Afianando](https://twitter.com/venxfa)
 
 Project Link: [https://github.com/IkoAfianando/rust-camel](https://github.com/yourusername/rust-camel)
