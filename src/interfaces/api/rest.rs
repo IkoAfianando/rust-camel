@@ -1,6 +1,6 @@
 use crate::application::services::message_service::MessageService;
 use crate::domain::models::error::DomainError;
-use crate::domain::models::exchange::Exchange;
+use crate::domain::models::exchange::{Exchange, ExchangeMetadata, ProcessingStep};
 use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -24,6 +24,8 @@ pub struct MessageResponse {
     headers: std::collections::HashMap<String, String>,
     created_at: String,
     updated_at: String,
+    processing_history: Vec<ProcessingStep>,
+    metadata: ExchangeMetadata,
 }
 
 impl From<Exchange> for MessageResponse {
@@ -34,6 +36,8 @@ impl From<Exchange> for MessageResponse {
             headers: exchange.headers,
             created_at: exchange.created_at.to_rfc3339(),
             updated_at: exchange.updated_at.to_rfc3339(),
+            processing_history: exchange.processing_history,
+            metadata: exchange.metadata,
         }
     }
 }

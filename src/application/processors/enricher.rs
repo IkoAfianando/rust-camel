@@ -37,6 +37,9 @@ impl Processor for EnricherProcessor {
 
         // Add processing metadata
         exchange.set_header("processed_at", chrono::Utc::now().to_rfc3339().as_str());
+        
+        // Add Processing Step
+        exchange.add_processing_step("enricher", 0, true, None);
 
         Ok(exchange)
     }
