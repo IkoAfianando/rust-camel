@@ -11,12 +11,14 @@ pub struct EnricherProcessor {
 
 impl EnricherProcessor {
     pub fn new() -> Self {
-        Self {
-            metadata: HashMap::new(),
-        }
+        let mut metadata = HashMap::new();
+        metadata.insert("processed_by".to_string(), "enricher".to_string());
+        Self { metadata }
+        
     }
 
-    pub fn with_metadata(metadata: HashMap<String, String>) -> Self {
+    pub fn with_metadata(mut metadata: HashMap<String, String>) -> Self {
+        metadata.insert("processed_by".to_string(), "enricher".to_string());
         Self { metadata }
     }
 
@@ -34,7 +36,6 @@ impl Processor for EnricherProcessor {
         }
 
         // Add processing metadata
-        exchange.set_header("processed_by", "enricher");
         exchange.set_header("processed_at", chrono::Utc::now().to_rfc3339().as_str());
 
         Ok(exchange)

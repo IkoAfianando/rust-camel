@@ -27,4 +27,24 @@ impl MessageService {
 
         Ok(processed_exchange)
     }
+
+    pub async fn get_and_process_message(
+        &self,
+        id: &uuid::Uuid,
+        additional_data: Option<String>,
+    ) -> Result<Option<Exchange>, DomainError> {
+        // Retrieve the message from the repository
+        let mut exchange = match self.repository.find_by_id(id).await? {
+            Some(exchange) => exchange,
+            None => return Err(DomainError::ProcessorError("Message not found".to_string())),
+        };
+
+        // Add additional data if provided
+        if let Some(data) = additional_data {
+            exchange.set_property("additional_data", &data);
+        }
+
+        // Always process through pipeline
+        self.process_message(exchange).await.map(Some)
+    }
 }

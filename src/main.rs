@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use actix_web::{web, App, HttpServer};
 pub use rust_camel::{
     application::{
         pipeline::ProcessorPipeline,
@@ -7,15 +9,14 @@ pub use rust_camel::{
         },
         services::message_service::MessageService,
     },
-    domain::models::exchange::Exchange,
     infrastructure::repositories::message_repository::InMemoryMessageRepository,
+    interfaces::api::rest::{create_message, process_message, AppState},
+    interfaces::api::health::{health_check},
 };
 use std::sync::Arc;
-use tokio::sync::mpsc;
-use tracing::{error, info};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> std::io::Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt::init();
 
@@ -24,7 +25,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create processors
     let logging_processor = Arc::new(LoggingProcessor::new("DEBUG".to_string()));
-    let enricher_processor = Arc::new(EnricherProcessor::new());
+    
+    let mut metadata = HashMap::new();
+    metadata.insert("service_name".to_string(), "rust-camel".to_string());
+    let enricher_processor = Arc::new(EnricherProcessor::with_metadata(metadata));
     let transform_processor = Arc::new(TransformProcessor::new());
     let filter_processor = Arc::new(FilterProcessor::new());
 
@@ -39,30 +43,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create message service
     let message_service = Arc::new(MessageService::new(repository, pipeline));
 
-    // Create channel for message processing
-    let (tx, mut rx) = mpsc::channel(100);
-    let service = message_service.clone();
-
-    // Spawn processing task
-    tokio::spawn(async move {
-        while let Some(exchange) = rx.recv().await {
-            match service.process_message(exchange).await {
-                Ok(processed_exchange) => {
-                    info!("Successfully processed exchange: {:?}", processed_exchange);
-                }
-                Err(e) => {
-                    error!("Error processing exchange: {}", e);
-                }
-            }
-        }
+    // Create app state
+    let state = web::Data::new(AppState {
+        message_service: message_service.clone(),
     });
 
-    // Send test messages
-    let exchange = Exchange::new("This is an IMPORTANT message".to_string());
-    tx.send(exchange).await?;
-
-    // Wait for processing to complete
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-
-    Ok(())
+    HttpServer::new(move || {
+        App::new().app_data(state.clone()).service(
+            web::scope("/api")
+                .route("/messages", web::post().to(create_message))
+                .route("/messages/process", web::post().to(process_message)),
+        )
+            .route("/health", web::get().to(health_check))
+    })
+    .bind("0.0.0.0:8080")?
+    .run()
+    .await
 }
